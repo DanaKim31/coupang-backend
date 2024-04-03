@@ -1,20 +1,19 @@
 package com.kh.coupang.controller;
 
-import com.kh.coupang.domain.Product;
-import com.kh.coupang.domain.Review;
-import com.kh.coupang.domain.ReviewDTO;
-import com.kh.coupang.domain.ReviewImage;
+import com.kh.coupang.domain.*;
 import com.kh.coupang.service.ReviewService;
+import com.querydsl.core.BooleanBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -73,8 +72,13 @@ public class ReviewController {
 
 
     @GetMapping("/review")
-    public ResponseEntity<List<Review>> viewAll() {
-        return ResponseEntity.status(HttpStatus.OK).body(service.viewAll());
+    public ResponseEntity<List<Review>> viewAll(@RequestParam(name="page", defaultValue = "1")int page) {
+        Sort sort = Sort.by("reviCode").descending();
+        Pageable paging = PageRequest.of(page-1, 5, sort);
+
+        Page<Review> list = service.viewAll(paging);
+
+        return ResponseEntity.status(HttpStatus.OK).body(list.getContent());
     }
 
 }
