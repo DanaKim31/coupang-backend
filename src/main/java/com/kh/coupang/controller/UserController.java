@@ -1,5 +1,6 @@
 package com.kh.coupang.controller;
 
+import com.kh.coupang.config.TokenProvider;
 import com.kh.coupang.domain.User;
 import com.kh.coupang.domain.UserDTO;
 import com.kh.coupang.service.UserService;
@@ -16,6 +17,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private TokenProvider tokenProvider;
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     @PostMapping("/signUp")
@@ -42,7 +46,19 @@ public class UserController {
     @PostMapping("/login")
     // 비밀번호 노출되지 않게 하기 위해서 GetMapping이 아닌 PostMappgin
     public ResponseEntity login(@RequestBody User vo) {
-        return 
+        User user = userService.login(vo.getId(), vo.getPassword(), passwordEncoder);
+        if(user != null) {
+            // 로그인 성공 -> 토큰 생성
+            String token =  tokenProvider.create(user);
+            UserDTO responseDTO = UserDTO.builder()
+                                    .id(user.getId())
+                                    .name(user.getName())
+                                    .token(token)
+                                    .build();
+            return ResponseEntity.ok().body(responseDTO);
+        }
+        // 로그인 실패
+        return ResponseEntity.badRequest().build();
     }
 
 }

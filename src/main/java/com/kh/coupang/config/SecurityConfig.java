@@ -1,18 +1,23 @@
 package com.kh.coupang.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
     // 특정 HTTP 요청에 대한 웹 기반 보안 구성. 인증/인가 및 로그아웃 설정
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -21,17 +26,17 @@ public class SecurityConfig {
                 // security에서 기본적으로 제공하는 기능 disable 처리
                 .csrf(csrf -> csrf.disable())
                 .httpBasic(basic -> basic.disable())
-                .sessionManagement(session -> 
+                .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 // 요청들마다 권한 처리(인증된 사람만 허용), 슬래쉬 뒤에 오는 것만 권한 허용
                 .authorizeHttpRequests(authorize ->
                     authorize
-                        // 해당하는 경로 지정해서 허용
-                        .requestMatchers("/signUp").permitAll()
-                        // 지정한 경로 외 것들 처리
-                        .anyRequest().authenticated()
+                        .requestMatchers("/signUp", "/login").permitAll() // 해당하는 경로 지정해서 허용
+                        .requestMatchers("/api/product").hasRole("USER") // 권한별 조회 페이지 제한
+                        .anyRequest().authenticated() // 지정한 경로 외 것들 처리
                 )
+                .addFilterAfter(jwtAuthenticationFilter, CorsFilter.class)
                 .build();
     }
 
