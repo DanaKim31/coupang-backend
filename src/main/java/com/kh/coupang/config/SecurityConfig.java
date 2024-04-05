@@ -32,7 +32,7 @@ public class SecurityConfig {
                 // 요청들마다 권한 처리(인증된 사람만 허용), 슬래쉬 뒤에 오는 것만 권한 허용
                 .authorizeHttpRequests(authorize ->
                     authorize
-                        .requestMatchers("/signUp", "/login").permitAll() // 해당하는 경로 지정해서 허용
+                        .requestMatchers("/signUp", "/login", "/api/public/**").permitAll() // 해당하는 경로 지정해서 허용
                         .requestMatchers("/api/product").hasRole("USER") // 권한별 조회 페이지 제한
                         .anyRequest().authenticated() // 지정한 경로 외 것들 처리
                 )

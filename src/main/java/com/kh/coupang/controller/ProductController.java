@@ -1,9 +1,7 @@
 package com.kh.coupang.controller;
 
-import com.kh.coupang.domain.Category;
-import com.kh.coupang.domain.Product;
-import com.kh.coupang.domain.ProductDTO;
-import com.kh.coupang.domain.QProduct;
+import com.kh.coupang.domain.*;
+import com.kh.coupang.service.ProductCommentService;
 import com.kh.coupang.service.ProductService;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -16,12 +14,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +34,9 @@ public class ProductController {
 
     @Autowired
     private ProductService product;
+
+    @Autowired
+    private ProductCommentService comment;
 
     @Value("${spring.servlet.multipart.location}")
     private String uploadPath; // D:\\upload
@@ -101,12 +106,7 @@ public class ProductController {
                 //ResponseEntity.status(HttpStatus.OK).build();
                 //ResponseEntity.status(HttpStatus.OK).body(product.viewCategory(category, pageable).getContent());
     }
-
-    @GetMapping("/product/{code}")
-    public ResponseEntity<Product> view(@PathVariable(name = "code") int code) {
-        Product vo = product.view(code);
-        return ResponseEntity.status(HttpStatus.OK).body(vo);
-    }
+    
 
     // 수정
     @PutMapping("/product")
@@ -165,5 +165,74 @@ public class ProductController {
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
+    // 상품 1개 조회
+    @GetMapping("/product/{code}")
+    public ResponseEntity<Product> view(@PathVariable(name = "code") int code) {
+        Product vo = product.view(code);
+        return ResponseEntity.status(HttpStatus.OK).body(vo);
+    }
+
+
+    // 상품 댓글 추가
+    @PostMapping("/product/comment")
+    public ResponseEntity createComment(@RequestBody ProductComment vo) {
+
+        // 시큐리티에 담은 로그인한 사용자의 정보 가져오기
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        Authentication authentication = securityContext.getAuthentication();
+        Object principal = authentication.getPrincipal();
+
+        if(principal instanceof User) {
+            User user = (User) principal;
+            vo.setUser(user);
+            return ResponseEntity.ok(comment.create(vo));
+        }
+
+        return ResponseEntity.badRequest().build();
+    }
+
+
+    // 상품 1개에 따른 댓글 조회  ->  비회원에게도 공개 : /public/ 추가
+    @GetMapping("/public/product/{code}/comment")
+    public ResponseEntity<List<ProductCommentDTO>> viewComment(@PathVariable(name="code") int code) {
+        List<ProductComment> topList = comment.getTopLevelComments(code);
+        List<ProductCommentDTO> response = new ArrayList<>();
+
+        for(ProductComment top : topList) {
+            // 대댓글
+            List<ProductComment> replies = comment.getRepliesComment(top.getProComCode(), code); // 각 댓글의 대댓글들
+            List<ProductCommentDTO> repliesDTO = new ArrayList<>();
+
+            for(ProductComment reply : replies) {
+                ProductCommentDTO dto = ProductCommentDTO.builder()
+                        .prodCode(reply.getProdCode())
+                        .proComCode(reply.getProComCode())
+                        .proComDesc(reply.getProComDesc())
+                        .proComDate(reply.getProComDate())
+                        .user(UserDTO.builder()
+                                .id(reply.getUser().getId())
+                                .name(reply.getUser().getName())
+                                .build())
+                        .build();
+                repliesDTO.add(dto);
+            }
+
+            // 댓글
+            ProductCommentDTO dto = ProductCommentDTO.builder()
+                    .prodCode(top.getProdCode())
+                    .proComCode(top.getProComCode())
+                    .proComDesc(top.getProComDesc())
+                    .proComDate(top.getProComDate())
+                    .user(UserDTO.builder()
+                            .id(top.getUser().getId())
+                            .name(top.getUser().getName())
+                            .build())
+                    .replies(repliesDTO)
+                    .build();
+            response.add(dto);
+        }
+
+        return ResponseEntity.ok(response);
+    }
 
 }
