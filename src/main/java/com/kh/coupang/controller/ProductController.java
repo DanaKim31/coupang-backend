@@ -196,43 +196,39 @@ public class ProductController {
     @GetMapping("/public/product/{code}/comment")
     public ResponseEntity<List<ProductCommentDTO>> viewComment(@PathVariable(name="code") int code) {
         List<ProductComment> topList = comment.getTopLevelComments(code);
-        List<ProductCommentDTO> response = new ArrayList<>();
-
-        for(ProductComment top : topList) {
-            // 대댓글
-            List<ProductComment> replies = comment.getRepliesComment(top.getProComCode(), code); // 각 댓글의 대댓글들
-            List<ProductCommentDTO> repliesDTO = new ArrayList<>();
-
-            for(ProductComment reply : replies) {
-                ProductCommentDTO dto = ProductCommentDTO.builder()
-                        .prodCode(reply.getProdCode())
-                        .proComCode(reply.getProComCode())
-                        .proComDesc(reply.getProComDesc())
-                        .proComDate(reply.getProComDate())
-                        .user(UserDTO.builder()
-                                .id(reply.getUser().getId())
-                                .name(reply.getUser().getName())
-                                .build())
-                        .build();
-                repliesDTO.add(dto);
-            }
-
-            // 댓글
-            ProductCommentDTO dto = ProductCommentDTO.builder()
-                    .prodCode(top.getProdCode())
-                    .proComCode(top.getProComCode())
-                    .proComDesc(top.getProComDesc())
-                    .proComDate(top.getProComDate())
-                    .user(UserDTO.builder()
-                            .id(top.getUser().getId())
-                            .name(top.getUser().getName())
-                            .build())
-                    .replies(repliesDTO)
-                    .build();
-            response.add(dto);
-        }
+        List<ProductCommentDTO> response = commentDetailList(topList, code);
 
         return ResponseEntity.ok(response);
     }
+
+
+    public List<ProductCommentDTO> commentDetailList(List<ProductComment> comments, int code) {
+        List<ProductCommentDTO> response = new ArrayList<>();
+
+        for(ProductComment item : comments) {
+            List<ProductComment> replies = comment.getRepliesComment(item.getProComCode(), code);
+            List<ProductCommentDTO> repliesDTO = commentDetailList(replies, code);
+            ProductCommentDTO dto = commentDetail(item);
+            dto.setReplies(repliesDTO);
+            response.add(dto);
+        }
+
+        return response;
+    }
+
+
+    public ProductCommentDTO commentDetail(ProductComment vo) {
+        return ProductCommentDTO.builder()
+                .prodCode(vo.getProdCode())
+                .proComCode(vo.getProComCode())
+                .proComDesc(vo.getProComDesc())
+                .proComDate(vo.getProComDate())
+                .user(UserDTO.builder()
+                        .id(vo.getUser().getId())
+                        .name(vo.getUser().getName())
+                        .build())
+                .build();
+    }
+
 
 }
