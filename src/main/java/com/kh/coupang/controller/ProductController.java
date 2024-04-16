@@ -1,6 +1,7 @@
 package com.kh.coupang.controller;
 
 import com.kh.coupang.domain.*;
+import com.kh.coupang.service.CategoryService;
 import com.kh.coupang.service.ProductCommentService;
 import com.kh.coupang.service.ProductService;
 import com.querydsl.core.BooleanBuilder;
@@ -30,6 +31,7 @@ import java.util.UUID;
 @Slf4j // console.log, syso와 같은 역할
 @RestController
 @RequestMapping("/api/*")
+@CrossOrigin(origins ={"*"}, maxAge = 6000)
 public class ProductController {
 
     @Autowired
@@ -38,8 +40,33 @@ public class ProductController {
     @Autowired
     private ProductCommentService comment;
 
+    @Autowired
+    private CategoryService category;
+
     @Value("${spring.servlet.multipart.location}")
     private String uploadPath; // D:\\upload
+
+    // 카테고리 가져오기
+    @GetMapping("/public/category")
+    // 하위 카테고리 리스트가 담겨져 있는 CategoryDTO (not Category)
+    public ResponseEntity<List<CategoryDTO>> categoryView() {
+        List<Category> topList = category.getTopLevelCategories();
+        List<CategoryDTO> response = new ArrayList<>();
+
+        for(Category item : topList) {
+            CategoryDTO dto = CategoryDTO.builder()
+                    .cateIcon(item.getCateIcon())
+                    .cateCode(item.getCateCode())
+                    .cateName(item.getCateName())
+                    .cateUrl(item.getCateUrl())
+                    .subCategories(category.getBottomLevelCategories(item.getCateCode()))
+                    .build();
+            response.add(dto);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+
 
     // 추가
     @PostMapping("/product")
@@ -75,7 +102,7 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-    @GetMapping("/product")
+    @GetMapping("/public/product")
     public ResponseEntity<List<Product>> viewAll(@RequestParam(name="category", required = false) Integer category, @RequestParam(name="page", defaultValue = "1") int page) {
         Sort sort = Sort.by("prodCode").descending();
         Pageable pageable = PageRequest.of(page-1, 10, sort);
@@ -166,7 +193,7 @@ public class ProductController {
     }
 
     // 상품 1개 조회
-    @GetMapping("/product/{code}")
+    @GetMapping("/public/product/{code}")
     public ResponseEntity<Product> view(@PathVariable(name = "code") int code) {
         Product vo = product.view(code);
         return ResponseEntity.status(HttpStatus.OK).body(vo);
@@ -229,6 +256,5 @@ public class ProductController {
                         .build())
                 .build();
     }
-
 
 }
