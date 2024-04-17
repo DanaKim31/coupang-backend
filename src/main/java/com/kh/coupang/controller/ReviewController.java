@@ -4,6 +4,7 @@ import com.kh.coupang.domain.*;
 import com.kh.coupang.service.ReviewCommentService;
 import com.kh.coupang.service.ReviewService;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ import java.util.UUID;
 @Slf4j
 @RestController
 @RequestMapping("/api/*")
+@CrossOrigin(origins ={"*"}, maxAge = 6000)
 public class ReviewController {
 
     @Autowired
@@ -43,6 +45,7 @@ public class ReviewController {
     @Value("${spring.servlet.multipart.location}")
     private String uploadPath;
 
+    // 리뷰 추가
     @PostMapping("/review")
     public ResponseEntity<Review> create(ReviewDTO dto) throws IOException {
 
@@ -79,14 +82,20 @@ public class ReviewController {
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-
-    @GetMapping("/review")
-    public ResponseEntity<List<Review>> viewAll(@RequestParam(name="page", defaultValue = "1")int page) {
+    // http://localhost:8080/api/public/product/47/review
+    // 상품 1개에 따른 리뷰 전체 보기
+    @GetMapping("/public/product/{code}/review")
+    public ResponseEntity<List<Review>> viewAll(@RequestParam(name="page", defaultValue = "1")int page, @PathVariable(name="code") int code) {
         Sort sort = Sort.by("reviCode").descending();
         Pageable paging = PageRequest.of(page-1, 5, sort);
 
-        Page<Review> list = service.viewAll(paging);
+        QReview qReview = QReview.review;
 
+        BooleanBuilder builder = new BooleanBuilder();
+        BooleanExpression expression = qReview.prodCode.eq(code);
+        builder.and(expression);
+
+        Page<Review> list = service.viewAll(paging, builder);
         return ResponseEntity.status(HttpStatus.OK).body(list.getContent());
     }
 

@@ -4,6 +4,7 @@ import com.kh.coupang.domain.Review;
 import com.kh.coupang.domain.ReviewImage;
 import com.kh.coupang.repo.ReviewDAO;
 import com.kh.coupang.repo.ReviewImageDAO;
+import com.querydsl.core.BooleanBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,8 +32,8 @@ public class ReviewService {
 
 
     // 전체 리뷰
-    public Page<Review> viewAll(Pageable paging) {
-        return review.findAll(paging);
+    public Page<Review> viewAll(Pageable paging, BooleanBuilder builder) {
+        return review.findAll(builder, paging); // 순서 중요!!
     }
 
 
